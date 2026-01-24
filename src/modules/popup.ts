@@ -4,6 +4,96 @@ import { getString } from "../utils/locale";
 import { getPref, setPref } from "../utils/prefs";
 import { addTranslateTask, getLastTranslateTask } from "../utils/task";
 import { slice } from "../utils/str";
+import { renderMarkdownWithMath } from "../utils/markdownRenderer";
+
+function getMarkdownStyle(): "paper" | "ui" | "compact" {
+  const raw = String(getPref("mathRenderingStyle") ?? "");
+  if (raw === "ui" || raw === "compact") return raw;
+  return "paper";
+}
+
+function applyMarkdownStyle(elem: HTMLElement): void {
+  elem.classList.remove("md-style-paper", "md-style-ui", "md-style-compact");
+  elem.classList.add(`md-style-${getMarkdownStyle()}`);
+}
+
+function ensurePopupPreviewStyles(doc: Document): void {
+  const head = doc.head || doc.documentElement;
+  if (!head) return;
+
+  const ensureLink = (id: string, href: string) => {
+    if (doc.getElementById(id)) return;
+    const link = doc.createElement("link");
+    link.id = id;
+    link.rel = "stylesheet";
+    link.href = href;
+    head.appendChild(link);
+  };
+
+  ensureLink(
+    `${config.addonRef}-katex-css`,
+    `chrome://${config.addonRef}/content/styles/katex.min.css`,
+  );
+  ensureLink(
+    `${config.addonRef}-markdown-preview-css`,
+    `chrome://${config.addonRef}/content/styles/markdownPreview.css`,
+  );
+}
+
+function hidePopupPreview(textarea: HTMLTextAreaElement, preview: HTMLElement) {
+  preview.style.display = "none";
+  textarea.style.removeProperty("visibility");
+}
+
+function showPopupPreview(
+  popup: HTMLElement,
+  textarea: HTMLTextAreaElement,
+  preview: HTMLElement,
+) {
+  const doc = popup.ownerDocument;
+  ensurePopupPreviewStyles(doc);
+
+  // Ensure the popup is a positioning context for our absolute overlay.
+  const win = doc.defaultView;
+  if (win?.getComputedStyle(popup)?.position === "static") {
+    popup.style.position = "relative";
+  }
+
+  preview.innerHTML = renderMarkdownWithMath(textarea.value);
+  applyMarkdownStyle(preview);
+  preview.style.fontSize = textarea.style.fontSize;
+  preview.style.lineHeight = textarea.style.lineHeight;
+
+  // Position overlay to match the textarea box.
+  const popupRect = popup.getBoundingClientRect();
+  const rect = textarea.getBoundingClientRect();
+  preview.style.position = "absolute";
+  preview.style.top = `${rect.top - popupRect.top}px`;
+  preview.style.left = `${rect.left - popupRect.left}px`;
+  preview.style.width = `${rect.width}px`;
+  preview.style.height = `${rect.height}px`;
+
+  preview.style.display = "block";
+  textarea.style.visibility = "hidden";
+}
+
+function syncPopupPreview(
+  popup: HTMLElement,
+  textarea: HTMLTextAreaElement,
+  preview: HTMLElement | null,
+) {
+  if (!preview) return;
+
+  const enabled = (getPref("enableMathRendering") as boolean) === true;
+  const hasText = !!textarea.value?.trim();
+  const isEditing = textarea.ownerDocument.activeElement === textarea;
+
+  if (!enabled || !hasText || textarea.hidden || isEditing) {
+    hidePopupPreview(textarea, preview);
+    return;
+  }
+  showPopupPreview(popup, textarea, preview);
+}
 
 export function updateReaderPopup() {
   const popup = addon.data.popup.currentPopup;
@@ -27,6 +117,9 @@ export function updateReaderPopup() {
   const textarea = popup?.querySelector(
     `#${makeId("text")}`,
   ) as HTMLTextAreaElement;
+  const preview = popup?.querySelector(
+    `#${makeId("preview")}`,
+  ) as HTMLDivElement | null;
   const addToNoteButton = popup?.querySelector(
     `#${makeId("addtonote")}`,
   ) as HTMLDivElement;
@@ -43,6 +136,7 @@ export function updateReaderPopup() {
     updateHidden(audiobox, true);
     updateHidden(translateButton, true);
     updateHidden(textarea, true);
+    if (preview) updateHidden(preview, true);
     updateHidden(addToNoteButton, true);
     return;
   }
@@ -104,6 +198,7 @@ export function updateReaderPopup() {
   }
 
   updatePopupSize(popup, textarea);
+  syncPopupPreview(popup, textarea, preview);
 }
 
 export function buildReaderPopup(
@@ -235,6 +330,14 @@ export function buildReaderPopup(
               },
             },
             {
+              type: "focus",
+              listener: () => updateReaderPopup(),
+            },
+            {
+              type: "blur",
+              listener: () => updateReaderPopup(),
+            },
+            {
               type: "dblclick",
               listener: (_ev) => {
                 const textarea = popup.querySelector(
@@ -254,6 +357,38 @@ export function buildReaderPopup(
                     type: "default",
                   })
                   .show();
+              },
+            },
+          ],
+        },
+        {
+          tag: "div",
+          id: makeId("preview"),
+          classList: [
+            `${config.addonRef}-popup-preview`,
+            `${config.addonRef}-readerpopup`,
+            "markdown-preview",
+          ],
+          styles: {
+            display: "none",
+            overflow: "auto",
+            border: "none",
+            background: "var(--color-sidepane)",
+            borderRadius: "6px",
+          },
+          properties: {
+            onpointerup: (e: Event) => e.stopPropagation(),
+            ondragstart: (e: Event) => e.stopPropagation(),
+          },
+          ignoreIfExists: true,
+          listeners: [
+            {
+              type: "click",
+              listener: () => {
+                const textarea = popup.querySelector(
+                  `#${makeId("text")}`,
+                ) as HTMLTextAreaElement;
+                textarea.focus();
               },
             },
           ],

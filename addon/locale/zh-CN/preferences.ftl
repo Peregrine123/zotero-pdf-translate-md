@@ -87,7 +87,15 @@ pref-interface-enableConcatKey =
 pref-interface-showSidebarRaw =
     .label = 条目面板区块：显示原文
 pref-interface-enableMathRendering =
-    .label = 条目面板区块：在翻译中渲染 LaTeX 公式
+    .label = 条目面板区块：在翻译中预览渲染 Markdown + LaTeX（$...$/$$...$$）
+pref-interface-mathRenderingStyle =
+    .value = 渲染样式
+pref-interface-mathRenderingStyle-paper =
+    .label = 论文
+pref-interface-mathRenderingStyle-ui =
+    .label = UI
+pref-interface-mathRenderingStyle-compact =
+    .label = 紧凑
 pref-interface-showSidebarCopy =
     .label = 条目面板区块：显示复制按钮
 pref-interface-rawResultOrder =
@@ -132,4 +140,3 @@ pref-about-version =
 
 pref-advanced-stripEmptyLines =
     .label = 从翻译结果中删除空行和思考内容
-

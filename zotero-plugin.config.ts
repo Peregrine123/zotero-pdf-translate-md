@@ -6,6 +6,7 @@ export default defineConfig({
   source: ["src", "addon"],
   dist: "build",
   name: pkg.config.addonName,
+  xpiName: "translate-md-enhance",
   id: pkg.config.addonID,
   namespace: pkg.config.addonRef,
   updateURL: `https://github.com/{{owner}}/{{repo}}/releases/download/release/${

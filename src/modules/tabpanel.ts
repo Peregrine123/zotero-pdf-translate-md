@@ -123,6 +123,8 @@ function buildExtraPanel(doc: Document) {
   if (!extraEngines.length) {
     return;
   }
+  const enableMarkdownPreview =
+    (getPref("enableMathRendering") as boolean) === true;
   ztoolkit.UI.appendElement(
     {
       tag: "vbox",
@@ -221,11 +223,11 @@ function buildExtraPanel(doc: Document) {
               ],
             },
             {
-              tag: "editable-text",
+              tag: enableMarkdownPreview ? "math-textbox" : "editable-text",
               namespace: "xul",
-              attributes: {
-                multiline: "true",
-              },
+              attributes: enableMarkdownPreview
+                ? { output: "true" }
+                : { multiline: "true" },
               styles: {
                 fontSize: `${getPref("fontSize")}px`,
                 lineHeight: getPref("lineHeight") as string,
@@ -275,6 +277,11 @@ function updateExtraPanel(container: HTMLElement | Document) {
     Array.from(
       container.querySelectorAll(`.${task.service}+editable-text`),
     ).forEach((elem) => ((elem as HTMLTextAreaElement).value = task.result));
+    Array.from(
+      container.querySelectorAll(`.${task.service}+math-textbox`),
+    ).forEach(
+      (elem) => ((elem as unknown as { value: string }).value = task.result),
+    );
   });
 }
 

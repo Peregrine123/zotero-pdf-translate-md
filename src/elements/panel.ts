@@ -76,7 +76,7 @@ export class TranslatorPanel extends PluginCEBase {
   </html:div>
   ${
     (getPref("enableMathRendering") as boolean)
-      ? `<math-textbox id="result-text"></math-textbox>`
+      ? `<math-textbox id="result-text" output="true"></math-textbox>`
       : `<editable-text id="result-text" multiline="true" />`
   }
 </html:div>

@@ -210,12 +210,41 @@
       native="true"
       preference="__prefsPrefix__.showSidebarRaw"
     />
-    <checkbox
-      id="__addonRef__-enableMathRendering"
-      data-l10n-id="pref-interface-enableMathRendering"
-      native="true"
-      preference="__prefsPrefix__.enableMathRendering"
-    />
+    <vbox>
+      <checkbox
+        id="__addonRef__-enableMathRendering"
+        data-l10n-id="pref-interface-enableMathRendering"
+        native="true"
+        preference="__prefsPrefix__.enableMathRendering"
+      />
+      <hbox
+        align="center"
+        class="enable-math-rendering"
+        style="padding-left: 18px; gap: 8px"
+      >
+        <label data-l10n-id="pref-interface-mathRenderingStyle"></label>
+        <radiogroup
+          id="__addonRef__-mathRenderingStyle"
+          class="enable-math-rendering"
+          native="true"
+          orient="horizontal"
+          preference="__prefsPrefix__.mathRenderingStyle"
+        >
+          <radio
+            data-l10n-id="pref-interface-mathRenderingStyle-paper"
+            value="paper"
+          />
+          <radio
+            data-l10n-id="pref-interface-mathRenderingStyle-ui"
+            value="ui"
+          />
+          <radio
+            data-l10n-id="pref-interface-mathRenderingStyle-compact"
+            value="compact"
+          />
+        </radiogroup>
+      </hbox>
+    </vbox>
     <checkbox
       data-l10n-id="pref-interface-rawResultOrder"
       native="true"

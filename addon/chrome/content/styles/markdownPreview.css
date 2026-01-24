@@ -1,0 +1,62 @@
+/*
+ * Lightweight Markdown preview styling.
+ * Keep it conservative so it blends into Zotero themes.
+ */
+
+.markdown-preview {
+  box-sizing: border-box;
+  padding: 6px;
+  white-space: normal;
+}
+
+.markdown-preview.md-style-paper {
+  font-family:
+    KaTeX_Main,
+    "Times New Roman",
+    Times,
+    "Noto Serif",
+    "Noto Serif CJK SC",
+    "Source Han Serif SC",
+    "Songti SC",
+    SimSun,
+    serif;
+  text-rendering: optimizeLegibility;
+}
+
+.markdown-preview.md-style-paper .katex {
+  /* KaTeX defaults to 1.21em, which can feel "too large" compared to paper body text. */
+  font-size: 1.1em;
+}
+
+.markdown-preview.md-style-paper .katex-display {
+  margin: 0.85em 0;
+}
+
+.markdown-preview.md-style-compact .katex {
+  font-size: 1em;
+}
+
+.markdown-preview.md-style-compact .katex-display {
+  margin: 0.6em 0;
+}
+
+.markdown-preview p {
+  margin: 0 0 0.6em 0;
+}
+
+.markdown-preview p:last-child {
+  margin-bottom: 0;
+}
+
+.markdown-preview pre {
+  overflow: auto;
+}
+
+.markdown-preview code,
+.markdown-preview pre {
+  font-family: monospace;
+}
+
+.markdown-preview a {
+  text-decoration: underline;
+}

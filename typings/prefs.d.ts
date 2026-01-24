@@ -86,6 +86,7 @@ declare namespace _ZoteroTypes {
       "aliyun.action": string;
       "aliyun.scene": string;
       "enableMathRendering": boolean;
+      "mathRenderingStyle": string;
       "stripEmptyLines": boolean;
       "libretranslate.endpoint": string;
       "mtranserver.endpoint": string;

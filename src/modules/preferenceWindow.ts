@@ -243,6 +243,18 @@ function buildPrefsPane() {
     });
 
   doc
+    .querySelector(`#${makeId("enableMathRendering")}`)
+    ?.addEventListener("command", (_e: Event) => {
+      onPrefsEvents("setEnableMathRendering");
+    });
+
+  doc
+    .querySelector(`#${makeId("mathRenderingStyle")}`)
+    ?.addEventListener("command", (_e: Event) => {
+      onPrefsEvents("setMathRenderingStyle");
+    });
+
+  doc
     .querySelector(`#${makeId("reset-titleTranslation")}`)
     ?.addEventListener("command", (e: Event) => {
       ztoolkit
@@ -279,6 +291,7 @@ function updatePrefsPaneDefault() {
   onPrefsEvents("setSentenceSecret", false);
   onPrefsEvents("setWordSecret", false);
   onPrefsEvents("setEnableAutoTagAnnotation", false);
+  onPrefsEvents("setEnableMathRendering", false);
 }
 
 function onPrefsEvents(type: string, fromElement: boolean = true) {
@@ -491,6 +504,22 @@ function onPrefsEvents(type: string, fromElement: boolean = true) {
       addon.api.getTemporaryRefreshHandler()();
       break;
     case "updatelineHeight":
+      addon.api.getTemporaryRefreshHandler()();
+      break;
+    case "setEnableMathRendering":
+      {
+        const elemValue = fromElement
+          ? (
+              doc.querySelector(
+                `#${makeId("enableMathRendering")}`,
+              ) as XUL.Checkbox
+            ).checked
+          : (getPref("enableMathRendering") as boolean);
+        setDisabled("enable-math-rendering", !elemValue);
+        addon.api.getTemporaryRefreshHandler()();
+      }
+      break;
+    case "setMathRenderingStyle":
       addon.api.getTemporaryRefreshHandler()();
       break;
     case "manageKeys":
