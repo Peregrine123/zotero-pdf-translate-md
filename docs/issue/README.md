@@ -27,6 +27,8 @@
 ### Open
 
 - `docs/issue/001-zotero7-incompatible-strict-min-version.md` - Zotero 7.0.32 安装本地 build XPI 提示“不兼容”（manifest strict_min_version=7.9.9）（in-progress）
+- `docs/issue/002-sidebar-flicker-and-clear-with-formula.md` - 固定侧边栏含公式时流式翻译闪烁后清空（in-progress）
+- `docs/issue/003-floating-window-style-not-unified-with-sidebar.md` - 悬浮翻译窗字体与 LaTeX 样式未与固定侧边栏统一（in-progress）
 
 ### Done
 

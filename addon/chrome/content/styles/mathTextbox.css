@@ -8,19 +8,6 @@ math-textbox {
   position: relative;
 }
 
-math-textbox[data-md-style="paper"] {
-  font-family:
-    KaTeX_Main,
-    "Times New Roman",
-    Times,
-    "Noto Serif",
-    "Noto Serif CJK SC",
-    "Source Han Serif SC",
-    "Songti SC",
-    SimSun,
-    serif;
-}
-
 math-textbox[overlay-visible] editable-text {
   visibility: hidden;
 }

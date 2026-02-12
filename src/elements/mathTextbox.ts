@@ -1,11 +1,16 @@
 import { config } from "../../package.json";
 import { getPref } from "../utils/prefs";
 import { renderMarkdownWithMath } from "../utils/markdownRenderer";
+import {
+  applyMarkdownStyle,
+  syncMarkdownPreviewTypography,
+} from "../utils/markdownPreviewStyle";
 
 export class MathTextboxElement extends XULElementBase {
   private _textbox: XULTextBoxElement | null = null;
   private _overlay: HTMLElement | null = null;
   private _value: string = "";
+  private _renderedValue: string | null = null;
   private _editing = false;
 
   private _upgradeProperty(prop: "value" | "placeholder"): void {
@@ -20,12 +25,6 @@ export class MathTextboxElement extends XULElementBase {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (this as any)[prop] = value;
     }
-  }
-
-  private _getMarkdownStyle(): "paper" | "ui" | "compact" {
-    const raw = String(getPref("mathRenderingStyle") ?? "");
-    if (raw === "ui" || raw === "compact") return raw;
-    return "paper";
   }
 
   get content() {
@@ -74,7 +73,9 @@ export class MathTextboxElement extends XULElementBase {
 
   set value(v: string) {
     this._value = v ?? "";
-    if (this._textbox) this._textbox.value = this._value;
+    if (this._textbox && this._textbox.value !== this._value) {
+      this._textbox.value = this._value;
+    }
     this._updateOverlay();
   }
   get value() {
@@ -121,10 +122,6 @@ export class MathTextboxElement extends XULElementBase {
   };
 
   private _updateOverlay(): void {
-    // Ensure styling is applied even when overlay is hidden (editing state).
-    const style = this._getMarkdownStyle();
-    this.setAttribute("data-md-style", style);
-
     // Respect user preference gate
     const enabled = (getPref("enableMathRendering") as boolean) === true;
     if (!enabled || !this._value?.trim()) {
@@ -157,15 +154,33 @@ export class MathTextboxElement extends XULElementBase {
   }
 
   private _showOverlay(): void {
-    if (this._overlay) this._overlay.remove();
+    const overlay = this._getOrCreateOverlay();
+    const prevHtml = overlay.innerHTML;
+    try {
+      applyMarkdownStyle(overlay);
+      syncMarkdownPreviewTypography(this._textbox ?? this, overlay);
+      if (this._renderedValue !== this._value || !prevHtml) {
+        overlay.innerHTML = renderMarkdownWithMath(this._value);
+        this._renderedValue = this._value;
+      }
+    } catch {
+      // Keep the last successful render to avoid clearing content mid-stream.
+      overlay.innerHTML = prevHtml || this._toPlainHtml(this._value);
+      this._renderedValue = null;
+    }
+    this.toggleAttribute("overlay-visible", true);
+  }
+
+  private _getOrCreateOverlay(): HTMLElement {
+    if (this._overlay) {
+      return this._overlay;
+    }
     const HTML_NS = "http://www.w3.org/1999/xhtml";
     const overlay = this.ownerDocument.createElementNS(
       HTML_NS,
       "div",
     ) as unknown as HTMLElement;
-    const style = this._getMarkdownStyle();
-    overlay.className = `math-overlay markdown-preview md-style-${style}`;
-    overlay.innerHTML = renderMarkdownWithMath(this._value);
+    overlay.className = "math-overlay markdown-preview";
     const isOutput = this.hasAttribute("output");
     if (isOutput) {
       // Avoid stealing clicks so users can select/copy rendered content or click links.
@@ -185,7 +200,17 @@ export class MathTextboxElement extends XULElementBase {
     }
     this._overlay = overlay;
     this.appendChild(overlay);
-    this.toggleAttribute("overlay-visible", true);
+    return overlay;
+  }
+
+  private _toPlainHtml(text: string): string {
+    const HTML_NS = "http://www.w3.org/1999/xhtml";
+    const node = this.ownerDocument.createElementNS(
+      HTML_NS,
+      "div",
+    ) as unknown as HTMLElement;
+    node.textContent = text;
+    return node.innerHTML.replace(/\n/g, "<br />");
   }
 
   private _hideOverlay(): void {
@@ -193,6 +218,7 @@ export class MathTextboxElement extends XULElementBase {
       this._overlay.remove();
       this._overlay = null;
     }
+    this._renderedValue = null;
     this.toggleAttribute("overlay-visible", false);
   }
 

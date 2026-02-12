@@ -5,17 +5,10 @@ import { getPref, setPref } from "../utils/prefs";
 import { addTranslateTask, getLastTranslateTask } from "../utils/task";
 import { slice } from "../utils/str";
 import { renderMarkdownWithMath } from "../utils/markdownRenderer";
-
-function getMarkdownStyle(): "paper" | "ui" | "compact" {
-  const raw = String(getPref("mathRenderingStyle") ?? "");
-  if (raw === "ui" || raw === "compact") return raw;
-  return "paper";
-}
-
-function applyMarkdownStyle(elem: HTMLElement): void {
-  elem.classList.remove("md-style-paper", "md-style-ui", "md-style-compact");
-  elem.classList.add(`md-style-${getMarkdownStyle()}`);
-}
+import {
+  applyMarkdownStyle,
+  syncMarkdownPreviewTypography,
+} from "../utils/markdownPreviewStyle";
 
 function ensurePopupPreviewStyles(doc: Document): void {
   const head = doc.head || doc.documentElement;
@@ -61,8 +54,7 @@ function showPopupPreview(
 
   preview.innerHTML = renderMarkdownWithMath(textarea.value);
   applyMarkdownStyle(preview);
-  preview.style.fontSize = textarea.style.fontSize;
-  preview.style.lineHeight = textarea.style.lineHeight;
+  syncMarkdownPreviewTypography(textarea, preview);
 
   // Position overlay to match the textarea box.
   const popupRect = popup.getBoundingClientRect();

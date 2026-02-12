@@ -7,6 +7,12 @@
   box-sizing: border-box;
   padding: 6px;
   white-space: normal;
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  color: inherit;
+  --md-katex-font-size: 1.21em;
+  --md-katex-display-margin: 0.85em;
 }
 
 .markdown-preview.md-style-paper {
@@ -21,23 +27,21 @@
     SimSun,
     serif;
   text-rendering: optimizeLegibility;
+  --md-katex-font-size: 1.1em;
+  --md-katex-display-margin: 0.85em;
 }
 
-.markdown-preview.md-style-paper .katex {
-  /* KaTeX defaults to 1.21em, which can feel "too large" compared to paper body text. */
-  font-size: 1.1em;
+.markdown-preview .katex {
+  font-size: var(--md-katex-font-size);
 }
 
-.markdown-preview.md-style-paper .katex-display {
-  margin: 0.85em 0;
+.markdown-preview .katex-display {
+  margin: var(--md-katex-display-margin) 0;
 }
 
-.markdown-preview.md-style-compact .katex {
-  font-size: 1em;
-}
-
-.markdown-preview.md-style-compact .katex-display {
-  margin: 0.6em 0;
+.markdown-preview.md-style-compact {
+  --md-katex-font-size: 1em;
+  --md-katex-display-margin: 0.6em;
 }
 
 .markdown-preview p {
