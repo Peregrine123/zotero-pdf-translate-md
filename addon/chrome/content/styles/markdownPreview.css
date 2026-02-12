@@ -11,13 +11,15 @@
   font-size: inherit;
   line-height: inherit;
   color: inherit;
-  --md-katex-font-size: 1.21em;
-  --md-katex-display-margin: 0.85em;
+  --md-math-font-scale: 1em;
+  --md-math-display-margin: 0.85em;
 }
 
 .markdown-preview.md-style-paper {
   font-family:
-    KaTeX_Main,
+    "Latin Modern Roman",
+    "CMU Serif",
+    "Computer Modern Serif",
     "Times New Roman",
     Times,
     "Noto Serif",
@@ -27,21 +29,27 @@
     SimSun,
     serif;
   text-rendering: optimizeLegibility;
-  --md-katex-font-size: 1.1em;
-  --md-katex-display-margin: 0.85em;
-}
-
-.markdown-preview .katex {
-  font-size: var(--md-katex-font-size);
-}
-
-.markdown-preview .katex-display {
-  margin: var(--md-katex-display-margin) 0;
+  --md-math-font-scale: 1.04em;
+  --md-math-display-margin: 0.9em;
 }
 
 .markdown-preview.md-style-compact {
-  --md-katex-font-size: 1em;
-  --md-katex-display-margin: 0.6em;
+  --md-math-font-scale: 0.95em;
+  --md-math-display-margin: 0.65em;
+}
+
+.markdown-preview mjx-container {
+  margin: 0;
+  font-size: var(--md-math-font-scale);
+  text-indent: 0;
+}
+
+.markdown-preview mjx-container[display="true"] {
+  margin: var(--md-math-display-margin) 0;
+}
+
+.markdown-preview mjx-container svg {
+  vertical-align: middle;
 }
 
 .markdown-preview p {

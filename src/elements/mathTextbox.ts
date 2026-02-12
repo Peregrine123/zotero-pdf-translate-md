@@ -39,10 +39,6 @@ export class MathTextboxElement extends XULElementBase {
           rel="stylesheet"
           href="chrome://${config.addonRef}/content/styles/markdownPreview.css"
         ></html:link>
-        <html:link
-          rel="stylesheet"
-          href="chrome://${config.addonRef}/content/styles/katex.min.css"
-        ></html:link>
       </linkset>
     `);
   }

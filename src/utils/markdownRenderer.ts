@@ -1,11 +1,5 @@
-import katex from "katex";
 import MarkdownIt from "markdown-it";
-
-const DEFAULT_KATEX_OPTIONS = {
-  throwOnError: false,
-  errorColor: "#cc0000",
-  strict: false,
-} as const;
+import { renderLatexWithMathJax } from "./mathjaxRenderer";
 
 const SAFE_PROTOCOLS = new Set(["http:", "https:", "mailto:"]);
 const PROTOCOL_RE = /^[a-z][a-z0-9+.-]*:/i;
@@ -174,7 +168,7 @@ function getMarkdownIt(): MarkdownIt {
     return alt ? `<span class="md-image-alt">${escapeHtml(alt)}</span>` : "";
   };
 
-  // KaTeX math ($...$/$$...$$) support.
+  // TeX math ($...$/$$...$$) support via MathJax.
   md.inline.ruler.after("backticks", "math_inline", mathInlineRule);
   md.block.ruler.after("blockquote", "math_block", mathBlockRule, {
     alt: ["paragraph", "reference", "blockquote", "list"],
@@ -182,8 +176,7 @@ function getMarkdownIt(): MarkdownIt {
   md.renderer.rules.math_inline = (tokens: any[], idx: number) => {
     const latex = tokens[idx]?.content ?? "";
     try {
-      return katex.renderToString(latex, {
-        ...DEFAULT_KATEX_OPTIONS,
+      return renderLatexWithMathJax(latex, {
         displayMode: false,
       });
     } catch {
@@ -193,8 +186,7 @@ function getMarkdownIt(): MarkdownIt {
   md.renderer.rules.math_block = (tokens: any[], idx: number) => {
     const latex = tokens[idx]?.content ?? "";
     try {
-      return `${katex.renderToString(latex, {
-        ...DEFAULT_KATEX_OPTIONS,
+      return `${renderLatexWithMathJax(latex, {
         displayMode: true,
       })}\n`;
     } catch {

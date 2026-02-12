@@ -1,16 +1,10 @@
-import katex from "katex";
+import { renderLatexWithMathJax } from "./mathjaxRenderer";
 
 // Unified, robust math rendering helpers
 // Avoid lookbehind for broader engine compatibility by capturing a non-escape prefix
 // Order: display (“$$ … $$”, "\\[ … \"] first), then inline “$ … $” (no newline), then "\\( … \")
 const MATH_REGEX =
   /(^|[^\\])\$\$([\s\S]*?)\$\$|\\\[([\s\S]*?)\\\]|(^|[^\\])\$(?!\$)([^\n]*?)\$(?!\$)|\\\(([\s\S]*?)\\\)/g;
-const DEFAULT_KATEX_OPTIONS = {
-  throwOnError: false,
-  errorColor: "#cc0000",
-  strict: false,
-} as const;
-
 export function containsMath(text: string): boolean {
   if (!text) return false;
   const TEST_REGEX =
@@ -66,8 +60,7 @@ export function renderMathInText(doc: Document, text: string): string {
     }
 
     try {
-      const rendered = katex.renderToString(latex, {
-        ...DEFAULT_KATEX_OPTIONS,
+      const rendered = renderLatexWithMathJax(latex, {
         displayMode,
       });
       result += rendered;

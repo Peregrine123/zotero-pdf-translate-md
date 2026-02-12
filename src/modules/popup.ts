@@ -24,10 +24,6 @@ function ensurePopupPreviewStyles(doc: Document): void {
   };
 
   ensureLink(
-    `${config.addonRef}-katex-css`,
-    `chrome://${config.addonRef}/content/styles/katex.min.css`,
-  );
-  ensureLink(
     `${config.addonRef}-markdown-preview-css`,
     `chrome://${config.addonRef}/content/styles/markdownPreview.css`,
   );
