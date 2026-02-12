@@ -151,18 +151,21 @@ export class MathTextboxElement extends XULElementBase {
 
   private _showOverlay(): void {
     const overlay = this._getOrCreateOverlay();
-    const prevHtml = overlay.innerHTML;
+    applyMarkdownStyle(overlay);
     try {
-      applyMarkdownStyle(overlay);
       syncMarkdownPreviewTypography(this._textbox ?? this, overlay);
-      if (this._renderedValue !== this._value || !prevHtml) {
-        overlay.innerHTML = renderMarkdownWithMath(this._value);
-        this._renderedValue = this._value;
-      }
     } catch {
-      // Keep the last successful render to avoid clearing content mid-stream.
-      overlay.innerHTML = prevHtml || this._toPlainHtml(this._value);
-      this._renderedValue = null;
+      // Keep rendering even if typography sync fails on some host elements.
+    }
+
+    if (this._renderedValue !== this._value || !overlay.innerHTML) {
+      try {
+        overlay.innerHTML = renderMarkdownWithMath(this._value);
+      } catch {
+        // Fall back to current plain text so UI does not appear "stuck/truncated".
+        overlay.innerHTML = this._toPlainHtml(this._value);
+      }
+      this._renderedValue = this._value;
     }
     this.toggleAttribute("overlay-visible", true);
   }

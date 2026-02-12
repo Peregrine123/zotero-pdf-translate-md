@@ -124,6 +124,49 @@ function parseNonStreamResponse(obj: any): string {
   return "";
 }
 
+function extractStreamedResultFromRaw(
+  raw: string,
+  useResponsesApi: boolean,
+): string {
+  if (!raw) return "";
+  let result = "";
+
+  // SSE-like payload (OpenAI-compatible)
+  if (raw.includes("data: ")) {
+    const lines = raw.split(/\r?\n/g);
+    for (const line of lines) {
+      if (!line.startsWith("data: ")) continue;
+      const payload = line.slice(6).trim();
+      if (!payload || payload === "[DONE]") continue;
+      try {
+        const obj = JSON.parse(payload);
+        const parsed = useResponsesApi
+          ? parseResponsesApiStreamResponse(obj)
+          : parseStreamResponse(obj);
+        result += parsed.content;
+      } catch {
+        // Ignore malformed trailing payload fragments.
+      }
+    }
+    return result;
+  }
+
+  // NDJSON payload (e.g. Ollama native streaming)
+  const lines = raw
+    .split(/\r?\n/g)
+    .map((line) => line.trim())
+    .filter(Boolean);
+  for (const line of lines) {
+    try {
+      const obj = JSON.parse(line);
+      result += parseStreamResponse(obj).content;
+    } catch {
+      // Ignore malformed trailing payload fragments.
+    }
+  }
+  return result;
+}
+
 const gptTranslate = async function (
   apiURL: string,
   model: string,
@@ -230,6 +273,20 @@ const gptTranslate = async function (
       preLength = e.target.response.length;
 
       refreshHandler();
+    };
+
+    // Final reconcile: parse the full raw stream payload once to avoid tail truncation.
+    xmlhttp.onloadend = () => {
+      const fullRaw = String(xmlhttp.response || xmlhttp.responseText || "");
+      const reconciled = extractStreamedResultFromRaw(fullRaw, useResponsesApi);
+      if (reconciled && reconciled.length >= result.length) {
+        result = reconciled;
+      }
+      const finalResult = result.replace(/^\n\n/, "");
+      if (data.result !== finalResult) {
+        data.result = finalResult;
+        refreshHandler();
+      }
     };
   };
 
