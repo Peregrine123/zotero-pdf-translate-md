@@ -9,7 +9,7 @@
     "prefsPrefix": "extensions.zotero.ZoteroPDFTranslate",
     "addonInstance": "PDFTranslate",
     "zoteroStrictMinVersion": "7.0.0",
-    "zoteroStrictMaxVersion": "8.0.*"
+    "zoteroStrictMaxVersion": "9.0.*"
   },
   "main": "src/index.ts",
   "scripts": {
