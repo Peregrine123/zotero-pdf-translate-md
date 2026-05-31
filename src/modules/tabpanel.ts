@@ -19,7 +19,7 @@ export function registerReaderTabPanel() {
     sidenav: {
       l10nID: getLocaleID("itemPaneSection-sidenav"),
       icon: `chrome://${config.addonRef}/content/icons/section-20.svg`,
-      // @ts-ignore
+      // @ts-ignore Zotero supports this field before zotero-types exposes it.
       orderable: false,
     },
     bodyXHTML: "<translator-plugin-panel />",

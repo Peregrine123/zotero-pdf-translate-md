@@ -170,8 +170,11 @@ export function updateReaderPopup() {
   const hideTranslateButton = task.status !== "waiting";
   updateHidden(translateButton, hideTranslateButton);
 
+  const isEditing = textarea.ownerDocument.activeElement === textarea;
   textarea.hidden = hidePopupTextarea || !hideTranslateButton;
-  textarea.value = task.result || task.raw;
+  if (!isEditing) {
+    textarea.value = task.result || task.raw;
+  }
   textarea.style.fontSize = `${getPref("fontSize")}px`;
   textarea.style.lineHeight = `${
     Number(getPref("lineHeight")) * Number(getPref("fontSize"))
@@ -319,11 +322,23 @@ export function buildReaderPopup(
             },
             {
               type: "focus",
-              listener: () => updateReaderPopup(),
+              listener: (ev) => {
+                const textarea = ev.currentTarget as HTMLTextAreaElement;
+                const preview = popup.querySelector(
+                  `#${makeId("preview")}`,
+                ) as HTMLDivElement | null;
+                syncPopupPreview(popup, textarea, preview);
+              },
             },
             {
               type: "blur",
-              listener: () => updateReaderPopup(),
+              listener: (ev) => {
+                const textarea = ev.currentTarget as HTMLTextAreaElement;
+                const preview = popup.querySelector(
+                  `#${makeId("preview")}`,
+                ) as HTMLDivElement | null;
+                syncPopupPreview(popup, textarea, preview);
+              },
             },
             {
               type: "dblclick",

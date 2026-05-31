@@ -70,6 +70,12 @@ test("renderMarkdownWithMath: keeps escaped dollars as text", () => {
   assertDoesNotRenderMath("Escaped \\$a^2$ should stay text");
 });
 
+test("renderMarkdownWithMath: renders adjacent inline math blocks", () => {
+  const html = renderMarkdownWithMath("$a$$b$");
+  const count = html.match(/mjx-container/g)?.length ?? 0;
+  assert.equal(count, 2);
+});
+
 test("renderMarkdownWithMath: renders block math ($$...$$) via MathJax", () => {
   const html = renderMarkdownWithMath(
     "$$\n\\int_0^1 x^2\\,dx = \\\\frac{1}{3}\n$$",
@@ -135,6 +141,28 @@ test("renderMarkdownWithMath: escapes raw HTML input", () => {
   const html = renderMarkdownWithMath('<img src=x onerror="alert(1)">');
   assert.ok(html.includes("&lt;img"), "expected HTML to be escaped");
   assert.ok(!html.includes("<img"), "raw HTML should not render");
+});
+
+test("renderMarkdownWithMath: strips unsafe MathJax href output", () => {
+  const html = renderMarkdownWithMath(
+    "Formula $\\href{javascript:alert(document.cookie)}{click}$",
+  );
+  assert.ok(!/<a\b/i.test(html), "MathJax must not emit clickable anchors");
+  assert.ok(
+    !/\b(?:href|xlink:href)=["']?javascript:/i.test(html),
+    "unsafe MathJax href leaked",
+  );
+});
+
+test("renderMarkdownWithMath: strips unsafe MathJax data href output", () => {
+  const html = renderMarkdownWithMath(
+    "Formula $\\href{data:text/html,<script>alert(1)</script>}{click}$",
+  );
+  assert.ok(!/<a\b/i.test(html), "MathJax must not emit clickable anchors");
+  assert.ok(
+    !/\b(?:href|xlink:href)=["']?data:/i.test(html),
+    "unsafe MathJax data href leaked",
+  );
 });
 
 test("renderMarkdownWithMath: does not render images by default", () => {

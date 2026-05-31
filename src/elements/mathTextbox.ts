@@ -17,12 +17,9 @@ export class MathTextboxElement extends XULElementBase {
     // If a property was set before the custom element upgraded/initialized,
     // it becomes an own-property and will bypass our getters/setters.
     if (Object.prototype.hasOwnProperty.call(this, prop)) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const value = (this as any)[prop];
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       delete (this as any)[prop];
       // Re-apply so our setter runs.
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (this as any)[prop] = value;
     }
   }
@@ -68,6 +65,9 @@ export class MathTextboxElement extends XULElementBase {
   }
 
   set value(v: string) {
+    if (this._editing) {
+      return;
+    }
     this._value = v ?? "";
     if (this._textbox && this._textbox.value !== this._value) {
       this._textbox.value = this._value;
@@ -93,10 +93,7 @@ export class MathTextboxElement extends XULElementBase {
   };
 
   private _onFocus = () => {
-    if (this.hasAttribute("output")) {
-      return;
-    }
-    // Input boxes: focus means the user is editing raw Markdown.
+    // Focus means the user is editing/selecting raw Markdown.
     this._editing = true;
     this._hideOverlay();
     this._setTextboxTabbable(true);
@@ -145,8 +142,8 @@ export class MathTextboxElement extends XULElementBase {
     }
 
     this._showOverlay();
-    // When preview is visible, avoid tabbing into the hidden textbox.
-    this._setTextboxTabbable(false);
+    // Keep output boxes keyboard-editable: focus will hide the overlay.
+    this._setTextboxTabbable(isOutput);
   }
 
   private _showOverlay(): void {

@@ -8,8 +8,13 @@ import { AllPackages } from "mathjax-full/js/input/tex/AllPackages.js";
 const adaptor = liteAdaptor();
 RegisterHTMLHandler(adaptor);
 
+const UNSAFE_TEX_PACKAGES = new Set(["html"]);
+const SAFE_TEX_PACKAGES = AllPackages.filter(
+  (pkg) => !UNSAFE_TEX_PACKAGES.has(pkg),
+);
+
 const tex = new TeX({
-  packages: AllPackages,
+  packages: SAFE_TEX_PACKAGES,
   maxBuffer: 10 * 1024,
 });
 
@@ -23,6 +28,13 @@ const doc = mathjax.document("", {
   OutputJax: svg,
 });
 
+function sanitizeMathJaxOutput(html: string): string {
+  return html
+    .replace(/<\/?a(?:\s[^>]*)?>/gi, "")
+    .replace(/\s(?:href|xlink:href)\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, "")
+    .replace(/\son[a-z]+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, "");
+}
+
 export function renderLatexWithMathJax(
   latex: string,
   options: { displayMode: boolean },
@@ -30,5 +42,5 @@ export function renderLatexWithMathJax(
   const node = doc.convert(latex, {
     display: options.displayMode,
   });
-  return adaptor.outerHTML(node);
+  return sanitizeMathJaxOutput(adaptor.outerHTML(node));
 }

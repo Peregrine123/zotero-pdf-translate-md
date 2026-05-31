@@ -1,5 +1,6 @@
 import { getPref, getString, transformPromptWithContext } from "../../utils";
 import { TranslateService } from "./base";
+import { parseStreamChunk } from "./gptStreamParser";
 
 type ID = "chatgpt" | "customgpt1" | "customgpt2" | "customgpt3" | "azuregpt";
 
@@ -26,51 +27,11 @@ function getCustomParams(prefix: string): Record<string, any> {
   }
 }
 
-interface ParsedResponse {
-  content: string;
-  finished: boolean;
-}
-
 /**
  * Detect if the endpoint URL is for OpenAI Responses API
  */
 function isResponsesApiEndpoint(url: string): boolean {
   return url.endsWith("/responses") || url.includes("/responses?");
-}
-
-/**
- * Parse streaming response for OpenAI Responses API
- * Event format: { "type": "response.output_text.delta", "delta": "text", ... }
- */
-function parseResponsesApiStreamResponse(obj: any): ParsedResponse {
-  const eventType = obj.type || "";
-
-  // Text delta event - this is the main event for streaming text
-  // Format: { "type": "response.output_text.delta", "delta": "In", ... }
-  if (eventType === "response.output_text.delta") {
-    return {
-      content: obj.delta || "",
-      finished: false,
-    };
-  }
-
-  // Completion events
-  if (
-    eventType === "response.completed" ||
-    eventType === "response.done" ||
-    eventType === "response.failed" ||
-    eventType === "response.incomplete"
-  ) {
-    return {
-      content: "",
-      finished: true,
-    };
-  }
-
-  // Other events we don't need to extract content from:
-  // response.created, response.in_progress, response.output_item.added,
-  // response.content_part.added, response.output_text.done, etc.
-  return { content: "", finished: false };
 }
 
 /**
@@ -92,26 +53,6 @@ function parseResponsesApiNonStreamResponse(obj: any): string {
   return "";
 }
 
-function parseStreamResponse(obj: any): ParsedResponse {
-  // Handle OpenAI format (choices array with delta)
-  if (obj.choices && obj.choices[0]) {
-    const choice = obj.choices[0];
-    return {
-      content: choice.delta?.content || "",
-      finished:
-        choice.finish_reason !== undefined && choice.finish_reason !== null,
-    };
-  }
-  // Handle Ollama native format (direct message)
-  else if (obj.message) {
-    return {
-      content: obj.message.content || "",
-      finished: obj.done === true,
-    };
-  }
-  return { content: "", finished: false };
-}
-
 function parseNonStreamResponse(obj: any): string {
   // Handle OpenAI format (choices array)
   if (obj.choices && obj.choices[0]) {
@@ -122,49 +63,6 @@ function parseNonStreamResponse(obj: any): string {
     return obj.message.content;
   }
   return "";
-}
-
-function extractStreamedResultFromRaw(
-  raw: string,
-  useResponsesApi: boolean,
-): string {
-  if (!raw) return "";
-  let result = "";
-
-  // SSE-like payload (OpenAI-compatible)
-  if (raw.includes("data: ")) {
-    const lines = raw.split(/\r?\n/g);
-    for (const line of lines) {
-      if (!line.startsWith("data: ")) continue;
-      const payload = line.slice(6).trim();
-      if (!payload || payload === "[DONE]") continue;
-      try {
-        const obj = JSON.parse(payload);
-        const parsed = useResponsesApi
-          ? parseResponsesApiStreamResponse(obj)
-          : parseStreamResponse(obj);
-        result += parsed.content;
-      } catch {
-        // Ignore malformed trailing payload fragments.
-      }
-    }
-    return result;
-  }
-
-  // NDJSON payload (e.g. Ollama native streaming)
-  const lines = raw
-    .split(/\r?\n/g)
-    .map((line) => line.trim())
-    .filter(Boolean);
-  for (const line of lines) {
-    try {
-      const obj = JSON.parse(line);
-      result += parseStreamResponse(obj).content;
-    } catch {
-      // Ignore malformed trailing payload fragments.
-    }
-  }
-  return result;
 }
 
 const gptTranslate = async function (
@@ -207,86 +105,51 @@ const gptTranslate = async function (
   const streamCallback = (xmlhttp: XMLHttpRequest) => {
     let preLength = 0;
     let result = "";
-    let buffer = ""; // Buffer to store incomplete JSON fragments
+    let buffer = "";
+    let streamFinished = false;
+
+    const publishResult = () => {
+      const finalResult = result.replace(/^\n\n/, "");
+      if (data.result !== finalResult) {
+        data.result = finalResult;
+        refreshHandler();
+      }
+    };
+
     xmlhttp.onprogress = (e: any) => {
+      if (streamFinished) {
+        preLength = e.target.response.length;
+        return;
+      }
       // Only concatenate the new strings
       const newResponse = e.target.response.slice(preLength);
+      const parsed = parseStreamChunk(buffer + newResponse, useResponsesApi);
 
-      // Handle both OpenAI SSE format and Ollama native streaming
-      let dataArray;
-      if (newResponse.includes("data: ")) {
-        // OpenAI SSE format
-        // Prepend buffer from previous incomplete chunk
-        const fullResponse = buffer + newResponse;
-        if (useResponsesApi) {
-          // Responses API has "event:" lines, need line-by-line parsing
-          dataArray = fullResponse
-            .split("\n")
-            .filter((line: string) => line.startsWith("data: "))
-            .map((line: string) => line.slice(6));
-        } else {
-          // Chat Completions format: simple split works
-          dataArray = fullResponse.split("data: ");
-        }
-        buffer = ""; // Reset buffer
-      } else {
-        // Ollama native format - each line is a JSON object
-        const fullResponse = buffer + newResponse;
-        dataArray = fullResponse
-          .split("\n")
-          .filter((line: string) => line.trim());
-        buffer = ""; // Reset buffer
-      }
-
-      for (let i = 0; i < dataArray.length; i++) {
-        const data = dataArray[i];
-        if (!data.trim()) continue;
-
-        try {
-          const obj = JSON.parse(data);
-          const { content, finished } = useResponsesApi
-            ? parseResponsesApiStreamResponse(obj)
-            : parseStreamResponse(obj);
-
-          result += content;
-          if (finished) {
-            break;
-          }
-        } catch {
-          // If parsing fails and this is the last item, it might be incomplete
-          // Save it to buffer for next iteration
-          // https://github.com/windingwind/zotero-pdf-translate/issues/1304
-          if (i === dataArray.length - 1) {
-            buffer = newResponse.includes("data: ") ? "data: " + data : data;
-          }
-          continue;
-        }
-      }
+      buffer = parsed.buffer;
+      result += parsed.content;
+      streamFinished = parsed.finished;
 
       // Clear timeouts caused by stream transfers
       if (e.target.timeout) {
         e.target.timeout = 0;
       }
 
-      // Remove \n\n from the beginning of the data
-      data.result = result.replace(/^\n\n/, "");
       preLength = e.target.response.length;
-
-      refreshHandler();
+      publishResult();
     };
 
-    // Final reconcile: parse the full raw stream payload once to avoid tail truncation.
     xmlhttp.onloadend = () => {
-      const fullRaw = String(xmlhttp.response || xmlhttp.responseText || "");
-      const reconciled = extractStreamedResultFromRaw(fullRaw, useResponsesApi);
-      if (reconciled && reconciled.length >= result.length) {
-        result = reconciled;
+      if (xmlhttp.status !== 200) {
+        return;
       }
-      const finalResult = result.replace(/^\n\n/, "");
-      if (data.result !== finalResult) {
-        data.result = finalResult;
-        refreshHandler();
+
+      if (!streamFinished && buffer.trim()) {
+        const parsed = parseStreamChunk(buffer, useResponsesApi, true);
+        buffer = parsed.buffer;
+        result += parsed.content;
+        streamFinished = parsed.finished;
       }
+      publishResult();
     };
   };
 

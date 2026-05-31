@@ -17,17 +17,9 @@
 
 .markdown-preview.md-style-paper {
   font-family:
-    "Latin Modern Roman",
-    "CMU Serif",
-    "Computer Modern Serif",
-    "Times New Roman",
-    Times,
-    "Noto Serif",
-    "Noto Serif CJK SC",
-    "Source Han Serif SC",
-    "Songti SC",
-    SimSun,
-    serif;
+    "Latin Modern Roman", "CMU Serif", "Computer Modern Serif",
+    "Times New Roman", Times, "Noto Serif", "Noto Serif CJK SC",
+    "Source Han Serif SC", "Songti SC", SimSun, serif;
   text-rendering: optimizeLegibility;
   --md-math-font-scale: 1.04em;
   --md-math-display-margin: 0.9em;
