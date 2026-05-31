@@ -3,6 +3,20 @@ import test from "node:test";
 
 import { renderMarkdownWithMath } from "../src/utils/markdownRenderer";
 
+function mathNodeCount(html: string): number {
+  return html.match(/<mjx-container\b/g)?.length ?? 0;
+}
+
+function assertRendersMath(markdown: string, expectedCount = 1): void {
+  const html = renderMarkdownWithMath(markdown);
+  assert.equal(mathNodeCount(html), expectedCount);
+}
+
+function assertDoesNotRenderMath(markdown: string): void {
+  const html = renderMarkdownWithMath(markdown);
+  assert.equal(mathNodeCount(html), 0);
+}
+
 test("renderMarkdownWithMath: renders basic markdown", () => {
   const html = renderMarkdownWithMath("# Title\n\nHello");
   assert.match(html, /<h1[^>]*>Title<\/h1>/);
@@ -26,6 +40,36 @@ test("renderMarkdownWithMath: renders short inline math ($k$)", () => {
   );
 });
 
+test("renderMarkdownWithMath: renders inline dollar math with math signals", () => {
+  assertRendersMath("Inline $a^2+b^2=c^2$ test");
+  assertRendersMath("Inline $\\frac{1}{2}$ test");
+  assertRendersMath("Inline $x_i$ test");
+});
+
+test("renderMarkdownWithMath: renders short variable inline math", () => {
+  assertRendersMath("Short $k$ ok");
+});
+
+test("renderMarkdownWithMath: rejects spaced inline dollar math", () => {
+  assertDoesNotRenderMath("Inline $ a^2 $ should stay raw");
+});
+
+test("renderMarkdownWithMath: rejects multiline inline dollar math", () => {
+  assertDoesNotRenderMath("Inline $a\nb$ should stay raw");
+});
+
+test("renderMarkdownWithMath: rejects natural language inside dollar delimiters", () => {
+  assertDoesNotRenderMath("This is $important$ text");
+});
+
+test("renderMarkdownWithMath: rejects numeric-only dollar content", () => {
+  assertDoesNotRenderMath("The price is $5$ today");
+});
+
+test("renderMarkdownWithMath: keeps escaped dollars as text", () => {
+  assertDoesNotRenderMath("Escaped \\$a^2$ should stay text");
+});
+
 test("renderMarkdownWithMath: renders block math ($$...$$) via MathJax", () => {
   const html = renderMarkdownWithMath(
     "$$\n\\int_0^1 x^2\\,dx = \\\\frac{1}{3}\n$$",
@@ -35,6 +79,40 @@ test("renderMarkdownWithMath: renders block math ($$...$$) via MathJax", () => {
       html.includes("mjx-container"),
     "expected MathJax display markup in output",
   );
+});
+
+test("renderMarkdownWithMath: renders whole-line single-line display math", () => {
+  assertRendersMath("$$ a^2+b^2=c^2 $$");
+});
+
+test("renderMarkdownWithMath: rejects display math with trailing prose", () => {
+  assertDoesNotRenderMath("$$ a^2 $$ trailing");
+});
+
+test("renderMarkdownWithMath: rejects empty display math", () => {
+  assertDoesNotRenderMath("$$$$");
+  assertDoesNotRenderMath("$$\n$$");
+});
+
+test("renderMarkdownWithMath: rejects multiline display math with trailing prose", () => {
+  assertDoesNotRenderMath("$$\na^2\n$$ trailing");
+});
+
+test("renderMarkdownWithMath: rejects inline text around display math delimiters", () => {
+  assertDoesNotRenderMath("before $$ a^2 $$ after");
+});
+
+test("renderMarkdownWithMath: does not support paren or bracket TeX delimiters", () => {
+  assertDoesNotRenderMath("Inline \\(a^2\\) should stay text");
+  assertDoesNotRenderMath("Display \\[a^2\\] should stay text");
+  assertDoesNotRenderMath("Inline \\\\(a^2\\\\) should stay text");
+  assertDoesNotRenderMath("Display \\\\[a^2\\\\] should stay text");
+});
+
+test("renderMarkdownWithMath: does not render math inside code spans or blocks", () => {
+  assertDoesNotRenderMath("Code `$a^2$` should stay code");
+  assertDoesNotRenderMath("```tex\n$a^2$\n```");
+  assertDoesNotRenderMath("    $$\n    a^2\n    $$");
 });
 
 test("renderMarkdownWithMath: blocks javascript: links", () => {

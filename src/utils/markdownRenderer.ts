@@ -3,6 +3,11 @@ import { renderLatexWithMathJax } from "./mathjaxRenderer";
 
 const SAFE_PROTOCOLS = new Set(["http:", "https:", "mailto:"]);
 const PROTOCOL_RE = /^[a-z][a-z0-9+.-]*:/i;
+const TEX_COMMAND_RE = /\\[a-zA-Z]+/;
+const MATH_OPERATOR_RE = /[\\^_=+\-*/<>|{}]/;
+const SHORT_VARIABLE_RE =
+  /^[A-Za-z\u0370-\u03ff](?:[_^](?:[A-Za-z0-9\u0370-\u03ff]+|\{[^{}\n]+\}))*$/;
+const NUMERIC_ONLY_RE = /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)$/;
 
 function escapeHtml(text: string): string {
   return text.replace(/[&<>"']/g, (ch) => {
@@ -35,6 +40,17 @@ function isSafeLink(href: string): boolean {
   return SAFE_PROTOCOLS.has(scheme);
 }
 
+function isInlineMathContent(content: string): boolean {
+  const trimmed = content.trim();
+  if (!trimmed) return false;
+  if (trimmed !== content) return false;
+  if (trimmed.includes("\n")) return false;
+  if (NUMERIC_ONLY_RE.test(trimmed)) return false;
+  if (TEX_COMMAND_RE.test(trimmed)) return true;
+  if (MATH_OPERATOR_RE.test(trimmed)) return true;
+  return SHORT_VARIABLE_RE.test(trimmed);
+}
+
 function mathInlineRule(state: any, silent: boolean): boolean {
   const src: string = state.src;
   const start = state.pos;
@@ -57,9 +73,7 @@ function mathInlineRule(state: any, silent: boolean): boolean {
     }
 
     const content = src.slice(start + 1, matchPos);
-    if (!content) return false;
-    if (content.includes("\n")) return false;
-    if (content[0] === " " || content[content.length - 1] === " ") return false;
+    if (!isInlineMathContent(content)) return false;
 
     if (silent) return true;
 
@@ -94,6 +108,7 @@ function mathBlockRule(
   if (firstLine.trim().endsWith("$$")) {
     const end = firstLine.lastIndexOf("$$");
     const content = firstLine.slice(0, end).trim();
+    if (!content) return false;
 
     state.line = startLine + 1;
     const token = state.push("math_block", "math", 0);
@@ -109,16 +124,18 @@ function mathBlockRule(
     const max = state.eMarks[nextLine];
     const line = state.src.slice(pos, max);
 
-    if (line.trim().startsWith("$$")) break;
+    if (line.trim() === "$$") break;
     content += `\n${line}`;
   }
 
   if (nextLine >= endLine) return false;
+  content = content.trim();
+  if (!content) return false;
 
   state.line = nextLine + 1;
   const token = state.push("math_block", "math", 0);
   token.block = true;
-  token.content = content.trim();
+  token.content = content;
   token.map = [startLine, state.line];
   return true;
 }
